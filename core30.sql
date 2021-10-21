@@ -66,13 +66,25 @@ select student.name , COUNT(student.id) from exam_management , student where exa
 group by exam_management.subject_id , student.name having COUNT(student.id)>=2
 
 -- 13. Cho bi?t nh?ng sinh viên nam có ?i?m trung bình l?n 1 trên 7.0 
-
+   select student_id , avg(mark)
+    from exam_management, student
+    where exam_management.student_id = student.id and number_of_exam_taking = 1 and gender = 'Nam'
+    group by student_id
+    having avg(mark) > 7;
 -- 14. Cho bi?t danh sách các sinh viên r?t trên 2 môn ? l?n thi 1 (r?t môn là ?i?m thi c?a môn không quá 4 ?i?m)
 
 -- 15. Cho bi?t danh sách nh?ng khoa có nhi?u h?n 2 sinh viên nam (ch?a c?n JOIN)
-
+   select faculty_id, count(id)
+    from student
+    where gender = 'Nam'
+    group by faculty_id
+    having count(id) >= 2;
 -- 16. Cho bi?t nh?ng khoa có 2 sinh viên ??t h?c b?ng t? 200000 ??n 300000
-
+ select faculty_id, count(id)
+    from student
+    where scholarship  between 200000 and 300000
+    group by faculty_id
+    having count(id) >= 2;
 -- 17. Cho bi?t sinh viên nào có h?c b?ng cao nh?t
 select  student.id, student.name,  student.scholarship from student
 group by student.id , student.name, student.scholarship
@@ -82,9 +94,56 @@ having scholarship >= (select max(scholarship) from student)
 
 -- 1. Sinh viên có n?i sinh ? Hà N?i và sinh vào tháng 02
 select * from student where student.hometown like N'Hà N?i' and to_char(birthday,'MM')='02';
-
 -- 2. Sinh viên có tu?i l?n h?n 20
-select * 
-from student where (YEAR(NOW()) - YEAR(birthday))>20;
+select student.name, current_year - to_number(to_char(student.birthday, 'YYYY')) age
+from student, (select to_number(to_char(sysdate, 'YYYY')) current_year from dual)
+where current_year - to_number(to_char(student.birthday, 'YYYY')) > 20;
 3. Sinh viên sinh vào mùa xuân n?m 1990
-select * from student where EXTRACT(YEAR from birthday) = 1990 and EXTRACT(MONTH from birthday) BETWEEN 1 and 3
+select * from student where EXTRACT(YEAR from birthday) = 1990 and EXTRACT(MONTH from birthday) BETWEEN 1 and 3;
+
+
+
+
+
+-- 1. Danh sách các sinh viên c?a khoa ANH V?N và khoa V?T LÝ
+select *
+ from student s inner join faculty f on s.faculty_id = f.id where f.id in (1,2)
+-- 2. Nh?ng sinh viên nam c?a khoa ANH V?N và khoa TIN H?C
+select student.name, faculty.name from student,faculty
+where student.faculty_id = faculty.id and (faculty.name = 'Anh - V?n' or faculty.name = 'Tin h?c') and student.gender = 'Nam';
+ 
+ 
+ -- 3. Cho bi?t sinh viên nào có ?i?m thi l?n 1 môn c? s? d? li?u cao nh?t
+select * from student s inner join exam_management
+-- 4. Cho bi?t sinh viên khoa anh v?n có tu?i l?n nh?t.
+select * from  student 
+where months_between(sysdate, birthday) / 12 =
+         (select  max(months_between(sysdate, birthday) / 12) 
+       from  student where faculty_id = 1 );
+-- 5. Cho bi?t khoa nào có ?ông sinh viên nh?t
+select subject.id, subject.name, count(exam_management.student_id) as total from subject 
+LEFT JOIN exam_management on subject.id = exam_management.subject_id
+GROUP by subject.id,  subject.name
+order by subject.id asc;
+-- 6. Cho bi?t khoa nào có ?ông  n? nh?t
+select faculty.name, gender, count(gender) from faculty,student
+where faculty.id = student.faculty_id and gender = 'N?'
+group by faculty.name, gender having count(student.faculty_id)>= all(select count(gender) from student where gender ='N?' group by student.faculty_id);
+-- 7. Cho bi?t nh?ng sinh viên ??t ?i?m cao nh?t trong t?ng môn
+
+-- 8. Cho bi?t nh?ng khoa không có sinh viên h?c
+select f.id, f.name, max(s.scholarship)   
+from faculty f
+LEFT JOIN student s ON f.id = s.faculty_id
+where s.scholarship is not null
+-- 9. Cho bi?t sinh viên ch?a thi môn c? s? d? li?u
+select f.id, f.name,s.gender, count(s.id) as total_Student
+from faculty f
+LEFT JOIN student s ON f.id = s.faculty_id
+GROUP by  f.id, f.name ,s.gender
+order by f.id;
+-- 10. Cho bi?t sinh viên nào không thi l?n 1 mà có d? thi l?n 2
+select student.name, number_of_exam_taking from exam_management
+join student on student.id = exam_management.student_id
+where number_of_exam_taking = 2 and not exists (select id , student_id, subject_id, exam_management.number_of_exam_taking , mark
+from exam_management where number_of_exam_taking = 1 and student.id = exam_management.student_id);
